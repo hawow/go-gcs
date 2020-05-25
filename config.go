@@ -8,7 +8,7 @@ import (
 type GCSConfig struct {
 	Bucket    string `envconfig:"GCS_BUCKET" required:"true"`
 	ProjectID string `envconfig:"GCS_PROJECT_ID" required:"true"`
-	JSONPath  string `envconfig:"GCS_JSON_PATH" required:"true"`
+	JSONPath  string `envconfig:"GOOGLE_APPLICATION_CREDENTIALS" required:"true"`
 }
 
 func LoadGSCConfig() GCSConfig {

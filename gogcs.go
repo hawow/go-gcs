@@ -3,7 +3,6 @@ package gogcs
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"google.golang.org/api/option"
 	"io"
 )
 
@@ -19,7 +18,7 @@ type GoGSCClient struct {
 
 func NewGCSClient(ctx context.Context) *GoGSCClient {
 	config := LoadGSCConfig()
-	client, err := storage.NewClient(ctx, option.WithCredentialsFile(config.JSONPath))
+	client, err := storage.NewClient(ctx)
 
 	if err != nil {
 		return nil

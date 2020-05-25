@@ -18,8 +18,8 @@ func TestLoadGSCConfig(t *testing.T) {
 			t.Errorf("Expecting Bucket to be %v, got %v", os.Getenv("GCS_BUCKET"), config.Bucket)
 		}
 
-		if config.JSONPath != os.Getenv("GCS_JSON_PATH") {
-			t.Errorf("Expecting JSONPath to be %v, got %v", os.Getenv("GCS_JSON_PATH"), config.JSONPath)
+		if config.JSONPath != os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") {
+			t.Errorf("Expecting JSONPath to be %v, got %v", os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"), config.JSONPath)
 		}
 	})
 }
