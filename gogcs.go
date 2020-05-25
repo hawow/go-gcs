@@ -7,6 +7,10 @@ import (
 	"io"
 )
 
+type GoGCSClient interface {
+	UploadSingleFile(ctx context.Context, file File) (*UploadedFile, error)
+}
+
 type GoGSCClient struct {
 	Client    *storage.Client
 	ProjectID string
