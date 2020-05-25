@@ -20,3 +20,10 @@ type UploadedFile struct {
 	Size        int64
 	ObjectAttrs *storage.ObjectAttrs
 }
+
+type DownloadedFile struct {
+	Object string
+	Name   string
+	Path   string
+	Data   *[]byte
+}

@@ -2,9 +2,11 @@ package gogcs
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestGetFullPath(t *testing.T) {
@@ -44,7 +46,7 @@ func TestGoGSCClient_UploadSingleFile(t *testing.T) {
 			Body:     f,
 			IsPublic: true,
 		}
-		result, err := client.UploadSingleFile(ctx, file)
+		result, err := client.UploadFile(ctx, file)
 
 		if err != nil {
 			t.Errorf("error not nil: %v", err)
@@ -52,6 +54,36 @@ func TestGoGSCClient_UploadSingleFile(t *testing.T) {
 
 		if result == nil {
 			t.Error("Result should not be nil!")
+		}
+		fmt.Printf("%+v\n", result)
+	})
+}
+
+func TestGoGSCClient_DownloadSingleFile(t *testing.T) {
+
+	t.Run("It should download single file", func(t *testing.T) {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+		defer cancel()
+		client := NewGCSClient(ctx)
+		if client == nil {
+			t.Error("Client is nil")
+			return
+		}
+		fmt.Printf("%+v\n", client)
+		downloadFile := DownloadedFile{
+			Object: "new/test/file/test.txt",
+			Name:   "fuck.txt",
+			Path:   "",
+		}
+		result, err := client.DownloadFile(ctx, downloadFile)
+
+		if err != nil {
+			t.Error("error not nil")
+		}
+
+		if result == nil {
+			t.Errorf("result is nil")
 		}
 	})
 }
