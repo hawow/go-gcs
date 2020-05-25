@@ -2,7 +2,6 @@ package gogcs
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -28,7 +27,7 @@ func TestNewGCSClient(t *testing.T) {
 	})
 }
 
-func TestGoGSCClient_UploadSingleFile(t *testing.T) {
+func TestGoGSCClient_UploadFile(t *testing.T) {
 	t.Run("It should upload one file", func(t *testing.T) {
 		ctx := context.Background()
 		client := NewGCSClient(ctx)
@@ -55,11 +54,10 @@ func TestGoGSCClient_UploadSingleFile(t *testing.T) {
 		if result == nil {
 			t.Error("Result should not be nil!")
 		}
-		fmt.Printf("%+v\n", result)
 	})
 }
 
-func TestGoGSCClient_DownloadSingleFile(t *testing.T) {
+func TestGoGSCClient_DownloadFile(t *testing.T) {
 
 	t.Run("It should download single file", func(t *testing.T) {
 		ctx := context.Background()
@@ -70,10 +68,9 @@ func TestGoGSCClient_DownloadSingleFile(t *testing.T) {
 			t.Error("Client is nil")
 			return
 		}
-		fmt.Printf("%+v\n", client)
 		downloadFile := DownloadedFile{
 			Object: "new/test/file/test.txt",
-			Name:   "fuck.txt",
+			Name:   "test.txt",
 			Path:   "",
 		}
 		result, err := client.DownloadFile(ctx, downloadFile)
@@ -84,6 +81,29 @@ func TestGoGSCClient_DownloadSingleFile(t *testing.T) {
 
 		if result == nil {
 			t.Errorf("result is nil")
+		}
+	})
+}
+
+func TestGoGSCClient_RemoveFile(t *testing.T) {
+	t.Run("It should download single file", func(t *testing.T) {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+		defer cancel()
+		client := NewGCSClient(ctx)
+		if client == nil {
+			t.Error("Client is nil")
+			return
+		}
+		downloadFile := DownloadedFile{
+			Object: "new/test/file/test.txt",
+			Name:   "test.txt",
+			Path:   "",
+		}
+		err := client.RemoveFile(ctx, downloadFile)
+
+		if err != nil {
+			t.Error("error not nil")
 		}
 	})
 }

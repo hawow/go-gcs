@@ -11,6 +11,7 @@ import (
 type GoGCSClient interface {
 	UploadFile(ctx context.Context, file File) (*UploadedFile, error)
 	DownloadFile(ctx context.Context, download DownloadedFile) (*DownloadedFile, error)
+	RemoveFile(ctx context.Context, download DownloadedFile) error
 }
 
 type GoGSCClient struct {
@@ -110,4 +111,14 @@ func (gcsClient GoGSCClient) DownloadFile(ctx context.Context, download Download
 	download.Data = &data
 
 	return &download, nil
+}
+
+func (gcsClient GoGSCClient) RemoveFile(ctx context.Context, download DownloadedFile) error {
+	object := gcsClient.Client.Bucket(gcsClient.Bucket).Object(download.Object)
+
+	if err := object.Delete(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
