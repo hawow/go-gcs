@@ -9,15 +9,16 @@ import (
 )
 
 type GoGCSClient interface {
-	UploadFile(ctx context.Context, file File) (*UploadedFile, error)
-	DownloadFile(ctx context.Context, download DownloadedFile) (*DownloadedFile, error)
-	RemoveFile(ctx context.Context, download DownloadedFile) error
+	UploadFiles(file []File) ([]UploadedFile, error)
+	DownloadFiles(downloads []DownloadedFile) error
+	RemoveFiles(downloads []DownloadedFile) error
 }
 
 type GoGSCClient struct {
 	Client    *storage.Client
 	ProjectID string
 	Bucket    string
+	Context   context.Context
 }
 
 func NewGCSClient(ctx context.Context) *GoGSCClient {
@@ -32,13 +33,12 @@ func NewGCSClient(ctx context.Context) *GoGSCClient {
 		Client:    client,
 		ProjectID: config.ProjectID,
 		Bucket:    config.Bucket,
+		Context:   ctx,
 	}
 }
 
-func (gcsClient GoGSCClient) UploadFile(ctx context.Context, file File) (*UploadedFile, error) {
+func (gcsClient GoGSCClient) UploadFiles(files []File) ([]UploadedFile, error) {
 	bh := gcsClient.Client.Bucket(gcsClient.Bucket).UserProject(gcsClient.ProjectID)
-	obj := bh.Object(GetFullPath(file.Path, file.Name))
-	w := obj.NewWriter(ctx)
 
 	defer func() {
 		err := gcsClient.Client.Close()
@@ -46,45 +46,49 @@ func (gcsClient GoGSCClient) UploadFile(ctx context.Context, file File) (*Upload
 			panic(fmt.Errorf("error during closing connection: %v", err))
 		}
 	}()
-	if _, err := io.Copy(w, file.Body); err != nil {
-		return nil, err
-	}
 
-	if err := w.Close(); err != nil {
-		return nil, err
-	}
+	var results []UploadedFile
 
-	if file.IsPublic {
-		if err := obj.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
-			return nil, err
+	for _, file := range files {
+		obj := bh.Object(GetFullPath(file.Path, file.Name))
+		w := obj.NewWriter(gcsClient.Context)
+
+		if _, err := io.Copy(w, file.Body); err != nil {
+			return results, err
 		}
+
+		if err := w.Close(); err != nil {
+			return results, err
+		}
+
+		if file.IsPublic {
+			if err := obj.ACL().Set(gcsClient.Context, storage.AllUsers, storage.RoleReader); err != nil {
+				return results, err
+			}
+		}
+
+		objAttrs, err := obj.Attrs(gcsClient.Context)
+
+		if objAttrs == nil {
+			return results, err
+		}
+
+		results = append(results, UploadedFile{
+			Name:        file.Name,
+			Size:        objAttrs.Size,
+			IsPublic:    file.IsPublic,
+			MD5:         MD5BytesToString(objAttrs.MD5),
+			Url:         ObjectToUrl(objAttrs),
+			ObjectAttrs: objAttrs,
+		})
 	}
 
-	objAttrs, err := obj.Attrs(ctx)
+	return results, nil
 
-	if objAttrs == nil {
-		return nil, err
-	}
-
-	return &UploadedFile{
-		Name:        file.Name,
-		Size:        objAttrs.Size,
-		IsPublic:    file.IsPublic,
-		MD5:         MD5BytesToString(objAttrs.MD5),
-		Url:         ObjectToUrl(objAttrs),
-		ObjectAttrs: objAttrs,
-	}, err
 }
 
-func (gcsClient GoGSCClient) DownloadFile(ctx context.Context, download DownloadedFile) (*DownloadedFile, error) {
-	rc, err := gcsClient.Client.Bucket(gcsClient.Bucket).Object(download.Object).NewReader(ctx)
-
-	defer func() {
-		err := gcsClient.Client.Close()
-		if err != nil {
-			panic(fmt.Errorf("error during closing connection: %v", err))
-		}
-	}()
+func (gcsClient GoGSCClient) downloadFile(download DownloadedFile) (*DownloadedFile, error) {
+	rc, err := gcsClient.Client.Bucket(gcsClient.Bucket).Object(download.Object).NewReader(gcsClient.Context)
 
 	if err != nil {
 		return nil, err
@@ -113,11 +117,46 @@ func (gcsClient GoGSCClient) DownloadFile(ctx context.Context, download Download
 	return &download, nil
 }
 
-func (gcsClient GoGSCClient) RemoveFile(ctx context.Context, download DownloadedFile) error {
+func (gcsClient GoGSCClient) removeFile(download DownloadedFile) error {
 	object := gcsClient.Client.Bucket(gcsClient.Bucket).Object(download.Object)
 
-	if err := object.Delete(ctx); err != nil {
+	if err := object.Delete(gcsClient.Context); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (gcsClient GoGSCClient) DownloadFiles(downloads []DownloadedFile) error {
+	defer func() {
+		err := gcsClient.Client.Close()
+		if err != nil {
+			panic(fmt.Errorf("error during closing connection: %v", err))
+		}
+	}()
+	for k, download := range downloads {
+		result, err := gcsClient.downloadFile(download)
+		if err != nil {
+			return err
+		}
+		downloads[k].Data = result.Data
+	}
+	return nil
+}
+
+func (gcsClient GoGSCClient) RemoveFiles(downloads []DownloadedFile) error {
+	defer func() {
+		err := gcsClient.Client.Close()
+		if err != nil {
+			panic(fmt.Errorf("error during closing connection: %v", err))
+		}
+	}()
+
+	for _, download := range downloads {
+		err := gcsClient.removeFile(download)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -27,7 +27,7 @@ func TestNewGCSClient(t *testing.T) {
 	})
 }
 
-func TestGoGSCClient_UploadFile(t *testing.T) {
+func TestGoGSCClient_UploadFiles(t *testing.T) {
 	t.Run("It should upload one file", func(t *testing.T) {
 		ctx := context.Background()
 		client := NewGCSClient(ctx)
@@ -45,7 +45,9 @@ func TestGoGSCClient_UploadFile(t *testing.T) {
 			Body:     f,
 			IsPublic: true,
 		}
-		result, err := client.UploadFile(ctx, file)
+		var files []File
+		files = append(files, file)
+		result, err := client.UploadFiles(files)
 
 		if err != nil {
 			t.Errorf("error not nil: %v", err)
@@ -58,8 +60,8 @@ func TestGoGSCClient_UploadFile(t *testing.T) {
 }
 
 func TestGoGSCClient_DownloadFile(t *testing.T) {
+	t.Run("It should download single/Multiple file", func(t *testing.T) {
 
-	t.Run("It should download single file", func(t *testing.T) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 		defer cancel()
@@ -68,25 +70,23 @@ func TestGoGSCClient_DownloadFile(t *testing.T) {
 			t.Error("Client is nil")
 			return
 		}
-		downloadFile := DownloadedFile{
-			Object: "new/test/file/test.txt",
-			Name:   "test.txt",
-			Path:   "",
+		downloadFiles := []DownloadedFile{
+			{
+				Object: "new/test/file/test.txt",
+				Name:   "test.txt",
+				Path:   "",
+			},
 		}
-		result, err := client.DownloadFile(ctx, downloadFile)
+		err := client.DownloadFiles(downloadFiles)
 
 		if err != nil {
 			t.Error("error not nil")
-		}
-
-		if result == nil {
-			t.Errorf("result is nil")
 		}
 	})
 }
 
 func TestGoGSCClient_RemoveFile(t *testing.T) {
-	t.Run("It should download single file", func(t *testing.T) {
+	t.Run("It should download single/multiple file", func(t *testing.T) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 		defer cancel()
@@ -95,12 +95,14 @@ func TestGoGSCClient_RemoveFile(t *testing.T) {
 			t.Error("Client is nil")
 			return
 		}
-		downloadFile := DownloadedFile{
-			Object: "new/test/file/test.txt",
-			Name:   "test.txt",
-			Path:   "",
+		downloadFiles := []DownloadedFile{
+			{
+				Object: "new/test/file/test.txt",
+				Name:   "test.txt",
+				Path:   "",
+			},
 		}
-		err := client.RemoveFile(ctx, downloadFile)
+		err := client.RemoveFiles(downloadFiles)
 
 		if err != nil {
 			t.Error("error not nil")
